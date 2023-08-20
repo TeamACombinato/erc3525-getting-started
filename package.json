@@ -1,0 +1,22 @@
+{
+  "name": "erc3525-getting-started",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.17.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.3",
+    "@solvprotocol/erc-3525": "^1.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

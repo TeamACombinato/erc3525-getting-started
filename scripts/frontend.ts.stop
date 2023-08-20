@@ -1,0 +1,37 @@
+import { ethers } from "hardhat";
+async function mint() {
+  const [owner] = await ethers.getSigners();
+  const GettingStarted = await ethers.getContractFactory("ERC3525GettingStarted");
+  const gettingStarted = await GettingStarted.attach('0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0');
+  const tx = await gettingStarted.mint(owner.address, 3525, 20220905);
+  await tx.wait();
+  const uri = await gettingStarted.tokenURI(1);
+  console.log(uri);
+  return uri;
+}
+// We recommend this pattern to be able to use async/await everywhere
+// and properly handle errors.
+
+(async () => {
+
+document.getElementById("connect").addEventListener("click", async () => {
+    const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+    });
+    document.getElementById(
+        "account_address"
+    ).textContent = `address: ${accounts[0]}`;
+});
+
+document.getElementById("mint").addEventListener("click", async () => {
+    document.getElementById("URI").textContent = mint().catch((error) => {
+        console.error(error);
+        process.exitCode = 1;
+      });
+
+mint().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+
+})();
