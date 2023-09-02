@@ -28,6 +28,7 @@ tokenURI is just the string of svg image, and this includes the information of t
 
 - `transfer`
 For users who own the tokens, one can pay the token to registered offices.
+Only all amount can be transfered, and we don't offer function dividing the amount.
 
 - `setZKPRequest`
 For managers, one can set up the airdrop of the deginated slot.
@@ -38,6 +39,17 @@ For users, one can submit the proof that proves one have the deginated VC.
 When one submit the proof, one can get specific amount of token.
 
 ## Details
+- erc3525-getting-started
+    - We basically followed the tutorial
+        - https://medium.com/solv-blog/erc-3525-starter-kit-developer-edition-9d734ca62bd0
+    - As the reference, we used the repo
+        - https://github.com/solv-finance/erc-3525/tree/main
+    - In this contract,
+        - slot is the token type representing the 23 wards in Tokyo
+        - tokenId is as it is, and it is the unique id for each token
+        - amount is the amount of the token representing the price of the token
+
+
 - iden3
     - We basically used the repo as of 2023/08/27
         - https://github.com/iden3/contracts/tree/860b3acb144515c45593053e8b05ae80afcefdf9
