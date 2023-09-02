@@ -3,50 +3,48 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@solvprotocol/erc-3525/ERC3525.sol";
+import "./polygon-id/lib/GenesisUtils.sol";
+import "./polygon-id/interfaces/ICircuitValidator.sol";
+import "./polygon-id/verifiers/ZKPVerifier.sol";
 
-contract ERC3525GettingStarted is ERC3525 {
+contract ERC3525GettingStarted is ERC3525, ZKPVerifier {
     using Strings for uint256;
-    address public owner;
+    address public ownerAddr;
 
     // 登録事業者の一覧
-    mapping(address => bool) private registered;
+    mapping(address => uint256) private registered;
 
-    // prefの一覧
-    string [] private pref =
-    ['Hokkaido','Aomori','Iwate','Miyagi','Akita',
-    'Yamagata','Fukushima','Ibaraki','Tochigi','Gunma',
-    'Saitama','Chiba','Tokyo','Kanagawa','Niigata',
-    'Toyama','Ishikawa','Fukui','Yamanashi','Nagano',
-    'Gifu','Shizuoka','Aichi','Mie','Shiga',
-    'Kyoto','Osaka','Hyogo','Nara','Wakayama',
-    'Tottori','Shimane','Okayama','Hiroshima','Yamaguchi',
-    'Tokushima','Kagawa','Ehime','Kochi','Fukuoka',
-    'Saga','Nagasaki','Kumamoto','Oita','Miyazaki',
-    'Kagoshima','Okinawa'];
+    // 認証済ユーザの一覧
+    mapping(address => uint256) private verified;
 
-    // [unicode"北海道",unicode"青森県",unicode"岩手県",unicode"宮城県",unicode"秋田県",
-    // unicode"山形県",unicode"福島県",unicode"茨城県",unicode"栃木県",unicode"群馬県",
-    // unicode"埼玉県",unicode"千葉県",unicode"東京都",unicode"神奈川県",unicode"新潟県",
-    // unicode"富山県",unicode"石川県",unicode"福井県",unicode"山梨県",unicode"長野県",
-    // unicode"岐阜県",unicode"静岡県",unicode"愛知県",unicode"三重県",unicode"滋賀県",
-    // unicode"京都府",unicode"大阪府",unicode"兵庫県",unicode"奈良県",unicode"和歌山県",
-    // unicode"鳥取県",unicode"島根県",unicode"岡山県",unicode"広島県",unicode"山口県",
-    // unicode"徳島県",unicode"香川県",unicode"愛媛県",unicode"高知県",unicode"福岡県",
-    // unicode"佐賀県",unicode"長崎県",unicode"熊本県",unicode"大分県",unicode"宮崎県",
-    // unicode"鹿児島県",unicode"沖縄県"];
+    // wardの一覧
+    string [] private ward =
+    ['Chiyoda', 'Chuo', 'Minato', 'Shinjuku', 'Bunkyo',
+    'Taito', 'Sumida', 'Koto', 'Shinagawa', 'Meguro',
+    'Ota', 'Setagaya', 'Shibuya', 'Nakano', 'Suginami',
+    'Toshima', 'Kita', 'Arakawa', 'Itabashi', 'Nerima',
+    'Adachi', 'Katsushika', 'Edogawa'];
+
+    // polygon-idに必要なセットアップ
+    mapping(uint256 => address) public idToAddress;
+    mapping(address => uint256) public addressToId;
 
     constructor(
         address owner_
     ) ERC3525("ERC3525GettingStarted", "YEN", 18) {
-        owner = owner_;
+        ownerAddr = owner_;
     }
 
-    function register() external {
+    function verifyBackdoor(uint256 slot_) external { // debug用 正式版リリース時消す
+        verified[msg.sender] = slot_;
+    }
+
+    function register(uint256 slot_) external {
         require(
-            !registered[msg.sender],
+            registered[msg.sender] == 0, // uintの初期値は0 なので、0の場合は未登録と判断
             "ERC3525GettingStarted: already registered"
         );
-        registered[msg.sender] = true;
+        registered[msg.sender] = slot_;
     }
 
     function exists(uint256 tokenId_) external view returns (bool exists_) {
@@ -55,8 +53,13 @@ contract ERC3525GettingStarted is ERC3525 {
 
     function mint(address to_, uint256 slot_, uint256 amount_) external {
         require(
-            msg.sender == owner,
+            msg.sender == ownerAddr,
             "ERC3525GettingStarted: only owner can mint"
+        );
+        // to_が認証済であることを確認
+        require(
+            verified[to_] == slot_,
+            "ERC3525GettingStarted: only verified user can mint"
         );
         _mint(to_, slot_, amount_);
     }
@@ -70,14 +73,17 @@ contract ERC3525GettingStarted is ERC3525 {
                     '<svg width="600" height="600" xmlns="http://www.w3.org/2000/svg">',
                     " <g> <title>Layer 1</title>",
                     '  <rect id="svg_1" height="600" width="600" y="0" x="0" stroke="#000" fill="#000000"/>',
-                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_2" y="340" x="200" stroke-width="0" stroke="#000" fill="#ffffff">tokenID: ',
+                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_2" y="270" x="200" stroke-width="0" stroke="#000" fill="#ffffff">tokenID: ',
                     tokenId_.toString(),
                     "</text>",
-                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_3" y="410" x="200" stroke-width="0" stroke="#000" fill="#ffffff">Balance: ',
-                    balanceOf(tokenId_).toString(),
+                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="12" id="svg_2" y="410" x="200" stroke-width="0" stroke="#000" fill="#ffffff">owner: ',
+                    Strings.toHexString(uint256(uint160(ownerOf(tokenId_))), 20), // addressを16進数に変換
                     "</text>",
-                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_3" y="270" x="200" stroke-width="0" stroke="#000" fill="#ffffff">Slot: ',
-                    pref[slotOf(tokenId_) - 1], // slot は都道府県を表す
+                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_3" y="340" x="200" stroke-width="0" stroke="#000" fill="#ffffff">Balance: ',
+                    balanceOf(tokenId_).toString(), ' YEN'
+                    "</text>",
+                    '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_3" y="200" x="200" stroke-width="0" stroke="#000" fill="#ffffff">Slot: ',
+                    ward[slotOf(tokenId_) - 1], // slot は23区を表す
                     "</text>",
                     '  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_4" y="160" x="150" stroke-width="0" stroke="#000" fill="#ffffff">ERC3525 GETTING STARTED</text>',
                     " </g> </svg>"
@@ -86,20 +92,68 @@ contract ERC3525GettingStarted is ERC3525 {
     }
 
     function transfer(
-        address from_,
         address to_,
         uint256 tokenId_
     ) external payable {
-        // from_ がオペレーターかトークンの所有者であることの確認は重複するため不要
-        // require(
-        //     from_ == ownerOf(tokenId_) | msg.sender == owner,
-        //     "ERC3525GettingStarted: transfer of token that is not owned"
-        // );
         // to が登録済であることを確認
         require(
-            registered[to_], // TODO: 都道府県ごとにチェックが入るべき
+            registered[to_] == slotOf(tokenId_),
             "ERC3525GettingStarted: transfer to unregistered recipient"
         );
-        transferFrom(from_, to_, tokenId_);
+        transferFrom(ownerOf(tokenId_), to_, tokenId_);
     }
+
+    // function _beforeProofSubmit(
+    //     uint64, /* requestId */
+    //     uint256[] memory inputs,
+    //     ICircuitValidator validator
+    // ) internal view override {
+    //     // check that the challenge input of the proof is equal to the msg.sender
+    //     address addr = GenesisUtils.int256ToAddress(
+    //         inputs[validator.getChallengeInputIndex()]
+    //     );
+    //     require(
+    //         _msgSender() == addr,
+    //         "address in the proof is not a sender address"
+    //     );
+    // }
+
+    function _afterProofSubmit(
+        uint64 requestId,
+        uint256[] memory inputs,
+        ICircuitValidator validator
+    ) internal override {
+        require(
+            addressToId[_msgSender()] == 0,
+            "proof can not be submitted more than once"
+        );
+
+        require(
+            proofs[_msgSender()][requestId] == true,
+            "only identities who provided proof are allowed to receive verification"
+        );
+
+        uint256 id = inputs[validator.getChallengeInputIndex()];
+        // 認証を与える
+        if (idToAddress[id] == address(0)) {
+            verified[_msgSender()] = requestId; // 認証を与える. requestId は slot に対応させている
+            _mint(_msgSender(), requestId, 500);    // 500円分mint(airdrop)を行う
+            addressToId[_msgSender()] = id;
+            idToAddress[id] = _msgSender();
+        }
+    }
+
+    // function _beforeValueTransfer(
+    //     address ,
+    //     address to_,
+    //     uint256 ,
+    //     uint256 ,
+    //     uint256 ,
+    //     uint256
+    // ) internal view override {
+    //     require(
+    //         proofs[to_][TRANSFER_REQUEST_ID] == true,
+    //         "only identities who provided proof are allowed to receive tokens"
+    //     );
+    // }
 }
